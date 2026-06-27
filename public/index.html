@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Erfan Custom Apparel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        /* --- CORE STYLING & GLASSMORPHISM --- */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            gap: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .canvas-container-wrapper {
+            background: rgba(255, 255, 255, 0.6); /* Slightly visible background so you see bounds */
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            width: 450px;
+            height: 550px;
+            overflow: hidden;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+            min-width: 280px;
+            color: white;
+            max-height: 600px;
+            overflow-y: auto; /* Adds scroll if many items */
+            padding-right: 10px;
+        }
+
+        /* Custom Scrollbar for controls */
+        .controls::-webkit-scrollbar { width: 6px; }
+        .controls::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Upgraded Buttons with Image Thumbnails */
+        .item-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .item-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(5px);
+        }
+
+        .item-thumbnail {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.8);
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .primary-btn {
+            background: #4ade80;
+            color: #064e3b;
+            font-size: 1.1em;
+            padding: 15px;
+            border: none;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .primary-btn:hover {
+            background: #22c55e;
+            transform: translateY(-2px);
+        }
+
+        /* --- RESPONSIVE MOBILE FIXES --- */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            
+            .glass-panel {
+                flex-direction: column; 
+                padding: 15px;
+                gap: 20px;
+            }
+
+            .canvas-container-wrapper {
+                width: 100%;
+                height: auto; /* Let it scale */
+                aspect-ratio: 4/5; /* Maintain shape */
+            }
+
+            /* The ultimate fix for Fabric.js mobile scaling */
+            .canvas-container, 
+            .canvas-container canvas {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                object-fit: contain;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-panel">
+        <div class="canvas-container-wrapper">
+            <canvas id="apparel-canvas" width="450" height="550"></canvas>
+        </div>
+
+        <div class="controls">
+            <h2 style="margin: 0 0 5px 0;">Design Studio</h2>
+            <div class="control-group">
+    <label>3. Upload Your Own Pattern</label>
+    <input type="file" id="file-uploader" accept="image/png" style="color: white;">
+</div>
+
+<div class="control-group">
+    <label>4. Selected Pattern Color</label>
+    <input type="color" id="pattern-color" value="#000000">
+</div>
+            <div class="control-group">
+                <label>1. Select Base Garment</label>
+                <button class="item-btn" onclick="loadGarment('tshirt-white-front.png')">
+                    <img src="./assets/garments/tshirt-white-front.png" class="item-thumbnail" alt="White T-Shirt" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                    <span>White T-Shirt (Front)</span>
+                </button>
+            </div>
+
+            <div class="control-group">
+                <label>2. Add Patterns & Text</label>
+                
+                <button class="item-btn" onclick="addText()">
+                    <div class="item-thumbnail" style="display:flex; justify-content:center; align-items:center; color: black; font-size:20px;">📝</div>
+                    <span>Add Custom Text</span>
+                </button>
+
+                <button class="item-btn" onclick="addPattern('pattern-angel.png')">
+                    <img src="./assets/patterns/pattern-angel.png" class="item-thumbnail" alt="Angel" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                    <span>Add Angel Pattern</span>
+                </button>
+
+                <button class="item-btn" onclick="addPattern('pattern-eagle.png')">
+                    <img src="./assets/patterns/pattern-eagle.png" class="item-thumbnail" alt="Eagle" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                    <span>Add Eagle Pattern</span>
+                </button>
+
+                <button class="item-btn" onclick="addPattern('pattern-skull.png')">
+                    <img src="./assets/patterns/pattern-skull.png" class="item-thumbnail" alt="Skull" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                    <span>Add Skull Pattern</span>
+                </button>
+            </div>
+            
+            <button id="submit-order" class="primary-btn">Submit Order</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = new fabric.Canvas('apparel-canvas');
+        
+        // Track the current garment so we can remove the old one when switching
+        let currentGarmentObject = null;
+        let selectedGarmentName = 'tshirt-white-front.png'; // for export data
+
+        // --- 1. LOAD MOVABLE GARMENT ---
+        function loadGarment(filename) {
+            const path = `./assets/garments/${filename}`;
+            selectedGarmentName = filename;
+            
+            fabric.Image.fromURL(path, function(img) {
+                if(!img) {
+                    console.warn(`Could not load ${path}.`);
+                    return;
+                }
+
+                // If a garment is already on the canvas, remove it first
+                if (currentGarmentObject) {
+                    canvas.remove(currentGarmentObject);
+                }
+                
+                // Scale the garment to fit nicely inside the canvas
+                img.scaleToHeight(canvas.height * 0.9);
+                
+                // Center the image
+                img.set({
+                    left: canvas.width / 2,
+                    top: canvas.height / 2,
+                    originX: 'center',
+                    originY: 'center',
+                    hasBorders: true,
+                    hasControls: true // Now it can be resized!
+                });
+                
+                canvas.add(img);
+                
+                // CRITICAL: Push the garment behind all existing patterns
+                canvas.sendToBack(img);
+                
+                currentGarmentObject = img;
+                canvas.setActiveObject(img);
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        // Initialize default garment
+        loadGarment('tshirt-white-front.png');
+
+        // --- 2. DESIGN TOOLS ---
+        
+        function addText() {
+            const text = new fabric.IText('Type Here', {
+                left: canvas.width / 2, top: canvas.height / 2,
+                originX: 'center', originY: 'center',
+                fontFamily: 'Arial', fill: '#000000',
+                fontSize: 40, textAlign: 'center',
+                fontWeight: 'bold'
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+        }
+
+        function addPattern(filename) {
+            const path = `./assets/patterns/${filename}`;
+            
+            fabric.Image.fromURL(path, function(img) {
+                if(!img) {
+                    alert(`Could not find ${path}.`);
+                    return;
+                }
+                
+                img.scaleToWidth(150);
+                img.set({ 
+                    left: canvas.width / 2, 
+                    top: canvas.height / 2,
+                    originX: 'center',
+                    originY: 'center'
+                });
+                
+                canvas.add(img);
+                
+                // Make sure patterns are always layered on top of the garment
+                if (currentGarmentObject) {
+                    img.bringToFront();
+                }
+                canvas.setActiveObject(img);
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        // Keyboard Delete
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                const activeObject = canvas.getActiveObject();
+                // Prevent deletion if they are editing text
+                if (activeObject && !activeObject.isEditing) { 
+                    canvas.remove(activeObject);
+                    // Clear reference if they deleted the base garment
+                    if (activeObject === currentGarmentObject) {
+                        currentGarmentObject = null;
+                    }
+                }
+            }
+        });
+
+        // --- 3. SUBMIT ORDER ---
+        document.getElementById('submit-order').addEventListener('click', async () => {
+            canvas.discardActiveObject();
+            canvas.renderAll();
+
+            const designData = canvas.toJSON();
+
+            const orderPayload = {
+                orderId: 'ORD-' + Math.floor(Math.random() * 900000 + 100000),
+                garmentType: selectedGarmentName,
+                designData: designData
+            };
+
+            try {
+                const response = await fetch('/api/save-design', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderPayload)
+                });
+
+                const result = await response.json();
+                if(result.success) {
+                    alert(`🎉 Success! Order ID: ${result.orderId}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Connection error. Is Node.js running?');
+            }
+        });
+
+
+
+        // --- 1. UPLOAD CUSTOM PNG ---
+        document.getElementById('file-uploader').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(f) {
+                const data = f.target.result;
+                fabric.Image.fromURL(data, function(img) {
+                    img.scaleToWidth(150);
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+            // --- UPDATED: CHANGE PATTERN COLOR (TINT) ---
+            document.getElementById('pattern-color').addEventListener('input', function(e) {
+                const activeObject = canvas.getActiveObject();
+                
+                // Ensure an object is selected and it is an image
+                if (activeObject && activeObject.type === 'image') {
+                    const newColor = e.target.value;
+                    
+                    // Remove existing tint filter if it exists, then add the new one
+                    activeObject.filters = [new fabric.Image.filters.Tint({
+                        color: newColor,
+                        opacity: 1
+                    })];
+                    
+                    // Apply the filter and update the canvas
+                    activeObject.applyFilters();
+                    canvas.renderAll();
+                } else {
+                    alert("Please select a pattern (image) first!");
+                }
+            });
+    </script>
+</body>
+</html>
